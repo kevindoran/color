@@ -3,9 +3,9 @@
   <head>
     <meta charset="utf-8">
     <title>WebGL Demo</title>
-    <link rel="stylesheet" href="./webgl.css" type="text/css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" type="text/css">
     <script src="https://webgl2fundamentals.org/webgl/resources/webgl-utils.js"></script>
-    <script src="webgl-demo.js" type='module'></script>
+    <script src="{{ url_for('static', filename='color.js') }}" type='module'></script>
   </head>
 
   <body>  

@@ -1,8 +1,14 @@
-import fsSource from './fragShader.js';
+//import fsSource from '{{ url_for("static", filename="fragShader.js") }}';
+import fsSource from '/static/fragShader.js';
 
 
 main();
+
 function main() {
+  var action_dict = {'orange': 0, 'brown': 1, 'neither': 2};
+  var circle_rgb = [1.0, 0.0, 0.0];
+  var bg_rgb = [0.0, 0.0, 0.0];
+
   const canvas = document.querySelector('#glcanvas');
   const gl = canvas.getContext('webgl2');
 
@@ -23,7 +29,48 @@ function main() {
   }`;
 
   const prg = initShaderProgram(gl, vsSource, fsSource);
-  drawScene(gl, prg);
+  drawScene(gl, prg, circle_rgb, bg_rgb);
+  document.addEventListener("keyup", function(event) {
+    if(event.defaultPrevented) {
+      // Do nothing if already processed.
+      return;
+    }
+    var ans = -1;
+    switch(event.key) {
+      case "ArrowLeft":
+        ans = action_dict['orange'];
+        break;
+      case "ArrowRight":
+        ans = action_dict['brown'];
+        break;
+      case "ArrowDown":
+        ans = action_dict['neither'];
+        break;
+      default:
+        return;
+    }
+    console.assert(ans != -1);
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/_add_result');
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.onload = function(e) {
+      const colors = JSON.parse(xhr.responseText);
+      circle_rgb = colors['circle_rgb'];
+      bg_rgb = colors['bg_rgb'];
+      drawScene(gl, prg, circle_rgb, bg_rgb);
+      };
+    xhr.onerror = function(e) {
+      console.log(xhr.status);
+      console.log('error receiving xhr.');
+      };
+    var data = {
+      'ans': ans,
+      'circle_rgb': circle_rgb,
+      'bg_rgb': bg_rgb
+    }
+    var json_data = JSON.stringify(data);
+    xhr.send(json_data);
+  });
 }
 
 
@@ -33,7 +80,9 @@ function resize(canvas) {
 }
 
 
-function drawScene(gl, prg) {
+
+
+function drawScene(gl, prg, circle_rgb, bg_rgb) {
   gl.clearColor(0.0, 1.0, 0.0, 1.0);  // Clear to black, fully opaque
   gl.clearDepth(1.0);                 // Clear everything
   gl.enable(gl.DEPTH_TEST);           // Enable depth testing
@@ -64,12 +113,12 @@ function drawScene(gl, prg) {
     false,
     0, 
     0);
-  const circle_color_location = gl.getUniformLocation(prg, 'u_circle_color');
-  const bg_color_location = gl.getUniformLocation(prg, 'u_bg_color');
+  const circle_rgb_location = gl.getUniformLocation(prg, 'u_circle_rgb');
+  const bg_rgb_location = gl.getUniformLocation(prg, 'u_bg_rgb');
   const position_location = gl.getUniformLocation(prg, 'u_position');
   const resolution_location = gl.getUniformLocation(prg, 'u_resolution');
-  gl.uniform3f(circle_color_location, 1.0, 0.0, 0.0);
-  gl.uniform3f(bg_color_location, 0.3, 0.3, 0.3);
+  gl.uniform3f(circle_rgb_location, circle_rgb[0], circle_rgb[1], circle_rgb[2]);
+  gl.uniform3f(bg_rgb_location, bg_rgb[0], bg_rgb[1], bg_rgb[2]);
   gl.uniform2f(resolution_location, gl.drawingBufferWidth, gl.drawingBufferHeight);
   gl.uniform2f(position_location, 0.5, 0.5);
 
