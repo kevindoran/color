@@ -5,7 +5,7 @@ import fsSource from '/static/fragShader.js';
 main();
 
 function main() {
-  var action_dict = {'orange': 0, 'brown': 1, 'neither': 2};
+  var action_dict = {'orange': 0, 'brown': 1, 'both': 2, 'neither': 3};
   var circle_rgb = [1.0, 0.0, 0.0];
   var bg_rgb = [0.0, 0.0, 0.0];
 
@@ -44,6 +44,9 @@ function main() {
         ans = action_dict['brown'];
         break;
       case "ArrowDown":
+        ans = action_dict['both'];
+        break;
+      case "ArrowUp":
         ans = action_dict['neither'];
         break;
       default:
