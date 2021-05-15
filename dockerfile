@@ -3,18 +3,16 @@ FROM pytorch/pytorch
 # Every thing seems to work a lot easier if we explicitly create a non-root 
 # user. This follows the advice from: https://vsupalov.com/docker-shared-permissions/
 # Creating the user made running Jupiter Lab work.
+# Creating a new (non-root) user makes a lot of things easier:
+# - there will be a home directory with user permissions
+# - no need to manually create a directory to work from
+# - avoid the "no username" being displayed when using iterative mode.
 ARG USER_ID=1001
 ARG GROUP_ID=101
 RUN addgroup -gid $GROUP_ID app
 RUN adduser --disabled-password --gecos '' --uid $USER_ID --gid $GROUP_ID app
-
-# Update: even better, create a user, and let the home dir be created as a result.
-# Recommended way to create a subdirectory is to not rely on WORKDIR to create
-# it. WORKDIR doesn't have any chown capabilities, and we need the app
-# directory to be user owned, as pytest creates some cache files.
-# https://github.com/moby/moby/issues/36677
-#RUN mkdir app && chown 1001 app
 WORKDIR /app
+
 # These next two folders will be where we will mount our local data and out
 # directories. We create them manually (automatic creation when mounting will
 # create them as being owned by root, and then our program cannot use them).
@@ -34,7 +32,7 @@ RUN conda config --add channels conda-forge && \
 	matplotlib \
 	pandas \
 	scikit-learn \
-# Leads to conflicts.
+# Leads to conflicts, so doing it with pip instead.
 # python-graphviz \
 	flask \
 	jupyterlab && \
@@ -44,8 +42,9 @@ RUN jupyter labextension install @axlair/jupyterlab_vim
 RUN pip install graphviz
 
 COPY --chown=$USER_ID ./ ./
-# The root user is needed to install things and create folders. Switching back
-# to the app user, which is the user that will run any container commands.
+
+# Switching to our new user. Do this at the end, as we need root permissions 
+# in order to create folders and install things.
 USER app
 
 # Install our own project as a module.

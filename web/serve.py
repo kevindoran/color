@@ -38,7 +38,13 @@ def add_result():
     bg_rgb = data['bg_rgb']
     ans = data['ans']
     add_header = not os.path.isfile(OUT_FILE)
-    s = pd.DataFrame([{'ans':ans, 'circle_rgb':circle_rgb, 'bg_rgb':bg_rgb}])
+    s = pd.DataFrame([{'ans':ans, 
+        'circle_r':circle_rgb[0], 
+        'circle_g':circle_rgb[1], 
+        'circle_b':circle_rgb[2], 
+        'bg_r':bg_rgb[0],
+        'bg_g':bg_rgb[1],
+        'bg_b':bg_rgb[2]}])
     s.to_csv(OUT_FILE, mode='a', index=False, header=add_header)
     next_colors = {
             'circle_rgb': next_circle_rgb(), 
