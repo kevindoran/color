@@ -3,3 +3,4 @@ out
 *.swp
 *.swo
 *.pyc
+**/.ipynb_checkpoints/
