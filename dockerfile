@@ -9,7 +9,7 @@ FROM pytorch/pytorch
 # - avoid the "no username" being displayed when using iterative mode.
 ARG USER_ID=1001
 ARG GROUP_ID=101
-RUN addgroup -gid $GROUP_ID app
+RUN addgroup --gid $GROUP_ID app
 RUN adduser --disabled-password --gecos '' --uid $USER_ID --gid $GROUP_ID app
 WORKDIR /app
 
@@ -26,9 +26,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 	 ffmpeg && \
 	 rm -rf /var/lib/apt/lists/*
 
-RUN conda config --add channels conda-forge && \
-	conda install --yes \
-	nodejs'>=12.0.0' \
+RUN conda config --add channels conda-forge 
+RUN conda install --yes \
+	#nodejs'>=12.0.0' \
 	matplotlib \
 	pandas \
 	scikit-learn \
@@ -37,6 +37,11 @@ RUN conda config --add channels conda-forge && \
 	flask \
 	jupyterlab && \
 	conda clean -ya
+RUN conda install --yes -c fastai nbdev 
+#RUN conda install --yes -c conda-forge nodejs'>=12.0.0' 
+# Custom repodata a temporary fix. See:
+# https://stackoverflow.com/questions/62325068/cannot-install-latest-nodejs-using-conda-on-mac
+RUN conda install --yes -c conda-forge nodejs'>=12.0.0' --repodata-fn=repodata.json
 RUN jupyter labextension install @axlair/jupyterlab_vim
 
 RUN pip install graphviz
