@@ -32,13 +32,11 @@ RUN conda install --yes \
 	matplotlib \
 	pandas \
 	scikit-learn \
-# Leads to conflicts, so doing it with pip instead.
-# python-graphviz \
 	flask \
-	jupyterlab && \
+	jupyterlab  \
+    ipywidgets && \
 	conda clean -ya
 RUN conda install --yes -c fastai nbdev 
-#RUN conda install --yes -c conda-forge nodejs'>=12.0.0' 
 # Custom repodata a temporary fix. See:
 # https://stackoverflow.com/questions/62325068/cannot-install-latest-nodejs-using-conda-on-mac
 RUN conda install --yes -c conda-forge nodejs'>=12.0.0' --repodata-fn=repodata.json
