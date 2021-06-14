@@ -40,7 +40,10 @@ RUN conda install --yes -c fastai nbdev
 # Custom repodata a temporary fix. See:
 # https://stackoverflow.com/questions/62325068/cannot-install-latest-nodejs-using-conda-on-mac
 RUN conda install --yes -c conda-forge nodejs'>=12.0.0' --repodata-fn=repodata.json
+RUN conda install -c conda-forge jupyterlab-spellchecker
 RUN jupyter labextension install @axlair/jupyterlab_vim
+# For jupyter lab 2.x
+# RUN jupyter labextension install @ijmbarr/jupyterlab_spellchecker
 
 RUN pip install graphviz
 
