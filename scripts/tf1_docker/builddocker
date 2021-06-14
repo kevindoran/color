@@ -1,0 +1,4 @@
+#!/bin/bash
+docker build -f ./scripts/tf1_docker/dockerfile -t colortf_i \
+	--build-arg USER_ID=$(id -u) \
+	--build-arg GROUP_ID=$(id -g) ./
