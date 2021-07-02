@@ -45,7 +45,10 @@ RUN jupyter labextension install @axlair/jupyterlab_vim
 # For jupyter lab 2.x
 # RUN jupyter labextension install @ijmbarr/jupyterlab_spellchecker
 
-RUN pip install graphviz
+RUN pip install --upgrade pip
+RUN pip install graphviz \
+        opencv-python \
+        moviepy
 
 COPY --chown=$USER_ID ./ ./
 

@@ -39,6 +39,8 @@ RUN conda install --yes \
 	#nodejs'>=12.0.0' \
 	#opencv \
 	jupyterlab  \
+    pandas \
+    imagemagick \
     ipywidgets && \
 	conda clean -ya
 RUN conda install --yes -c fastai nbdev 
