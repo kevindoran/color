@@ -11,7 +11,7 @@ ARG USER_ID=1001
 ARG GROUP_ID=101
 RUN addgroup --gid $GROUP_ID app
 RUN adduser --disabled-password --gecos '' --uid $USER_ID --gid $GROUP_ID app
-WORKDIR /app
+WORKDIR /home/app
 
 # These next two folders will be where we will mount our local data and out
 # directories. We create them manually (automatic creation when mounting will
@@ -23,6 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 	 libsm6 \
 	 libxext6 \
      libxrender-dev \
+     imagemagick \
 	 ffmpeg && \
 	 rm -rf /var/lib/apt/lists/*
 
@@ -31,9 +32,13 @@ RUN conda install --yes \
 	#nodejs'>=12.0.0' \
 	matplotlib \
 	pandas \
+# Doesn't resolve :(. Using Apt-get instead.
+#    imagemagick \
 	scikit-learn \
 	flask \
 	jupyterlab  \
+    ipykernel>=6 \
+    xeus-python \
     ipywidgets && \
 	conda clean -ya
 RUN conda install --yes -c fastai nbdev 
@@ -48,9 +53,15 @@ RUN jupyter labextension install @axlair/jupyterlab_vim
 RUN pip install --upgrade pip
 RUN pip install graphviz \
         opencv-python \
+        icecream \
         moviepy
 
 COPY --chown=$USER_ID ./ ./
+
+# Fix permission issues with ims
+# https://stackoverflow.com/a/54230833/754300
+RUN rm /etc/ImageMagick-6/policy.xml
+
 
 # Switching to our new user. Do this at the end, as we need root permissions 
 # in order to create folders and install things.
