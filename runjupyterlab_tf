@@ -2,8 +2,8 @@
 docker run -it \
 --gpus all \
 --name colortf \
--v $(pwd)/notebooks:/app/notebooks \
--v /media/disk2/:/app/data \
+-v $(pwd)/notebooks:/home/app/notebooks \
+-v /media/disk2/:/home/app/data \
 -p 0.0.0.0:8888:8888 \
 colortf_i \
 jupyter lab --notebook-dir='./notebooks' --no-browser --ip=0.0.0.0 --port=8888 

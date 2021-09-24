@@ -1,10 +1,10 @@
 #!/bin/bash
-docker rm csj
+#docker rm csj
 docker run -it \
 --gpus all \
---name csj \
--v $(pwd)/notebooks:/app/notebooks \
--v /media/disk2/:/app/data \
+--name="csj-$(date +%s)" \
+-v $(pwd):/app \
+-v /media/disk2/:/data \
 -p 0.0.0.0:8888:8888 \
 csi \
 jupyter lab --notebook-dir='./notebooks' --no-browser --ip=0.0.0.0 --port=8888 

@@ -1,8 +1,8 @@
 #!/bin/bash
-docker rm csj
+#docker rm csj
 docker run -it \
 --name csj \
--v $(pwd)/notebooks:/app/notebooks \
+-v $(pwd)/notebooks:/home/app/notebooks \
 -p 0.0.0.0:8888:8888 \
 csi \
 jupyter lab --notebook-dir='./notebooks' --no-browser --ip=0.0.0.0 --port=8888 

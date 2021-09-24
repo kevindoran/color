@@ -1,5 +1,4 @@
-FROM pytorch/pytorch
-
+FROM pytorch/pytorch 
 # Every thing seems to work a lot easier if we explicitly create a non-root 
 # user. This follows the advice from: https://vsupalov.com/docker-shared-permissions/
 # Creating the user made running Jupiter Lab work.
@@ -11,7 +10,14 @@ ARG USER_ID=1001
 ARG GROUP_ID=101
 RUN addgroup --gid $GROUP_ID app
 RUN adduser --disabled-password --gecos '' --uid $USER_ID --gid $GROUP_ID app
-WORKDIR /home/app
+# When switching to mounting the whole project as a volume, it
+# seemed wrong to mount it at the existing /home/app directory. So,
+# going one level deeper. I think an alternative is to just work from
+# /app, but I think some programs like JupyterLab have some issues
+# when running from outside the home tree.
+#WORKDIR /home/app	
+RUN mkdir app && chown $USER_ID app
+WORKDIR /app	
 
 # These next two folders will be where we will mount our local data and out
 # directories. We create them manually (automatic creation when mounting will
@@ -56,17 +62,20 @@ RUN pip install graphviz \
         icecream \
         moviepy
 
+# In order to allow the Python package to be edited without
+# a rebuild, install all code as a volume. We will still copy the
+# files initially, so that things like the below pip install can work.
 COPY --chown=$USER_ID ./ ./
 
 # Fix permission issues with ims
 # https://stackoverflow.com/a/54230833/754300
 RUN rm /etc/ImageMagick-6/policy.xml
 
+# Install our own project as a module.
+# This is done so the tests and JupyterLab code can import it.
+ENV DISTUTILS_DEBUG=1
+RUN pip install -e ./nncolor
 
 # Switching to our new user. Do this at the end, as we need root permissions 
 # in order to create folders and install things.
 USER app
-
-# Install our own project as a module.
-# This is done so the tests can import it.
-# RUN pip install .

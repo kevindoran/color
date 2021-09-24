@@ -5,8 +5,8 @@ docker run -it \
 -u $(id -u):$(id -g) \
 --gpus all \
 --name cs \
--v $(pwd)/data:/app/data \
--v $(pwd)/out:/app/out \
+-v $(pwd)/data:/home/app/data \
+-v $(pwd)/out:/home/app/out \
 -p 0.0.0.0:6006:6006 \
 csi \
 $1

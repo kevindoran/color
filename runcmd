@@ -1,5 +1,5 @@
 #!/bin/bash
-docker rm csj
+#docker rm csj
 docker run -it \
 --name csj \
 -v $(pwd)/notebooks:/app/notebooks \
