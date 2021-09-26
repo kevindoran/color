@@ -107,12 +107,13 @@ def create_samples(num_samples):
 class ColorDotDataset(torch.utils.data.Dataset):
     "Colored circles on colored background, a dataset."
     
-    def __init__(self, labelled_colors):
+    def __init__(self, labelled_colors, transform=None):
         """Generate dataset from an array of (label, circle_rgb, bg_rgb) tuples.
         """
         self._labelled_colors = labelled_colors
-        self.rng = np.random.default_rng(123)
-        self.shuffled_idxs = self.rng.integers(low=0, 
+        self.transform = transform
+        self._rng = np.random.default_rng(123)
+        self._shuffled_idxs = self._rng.integers(low=0, 
                 high=self.__len__(), size=self.__len__())
         
     def __len__(self):
@@ -121,12 +122,15 @@ class ColorDotDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
-        idx = self.shuffled_idxs[idx]    
+        idx = self._shuffled_idxs[idx]    
         color_idx = idx // NUM_POSITIONS
         pos = idx % NUM_POSITIONS
         label, circle_rgb, bg_rgb = self._labelled_colors[color_idx]
-        ic((pos, label, circle_rgb, bg_rgb))
-        return {'image': circle_img(pos, circle_rgb, bg_rgb), 'label': label}
+        img = circle_img(pos, circle_rgb, bg_rgb)
+        if self.transform:
+            img = self.transform(img)
+        return {'image': img, 'label': label}
+        #return (img, label)
     
     
 def train_test_val_split(labelled_colors, split_ratio=[6, 1, 1]):
@@ -149,8 +153,9 @@ def filter_colors(table, include_colors):
     #table[0] = table[0].apply(lambda x : COLOR_ID_TO_LABEL[x])
     #filtered = table[table['ans'] in include_labels]
     for idx, row in table.iterrows():
-        label = COLOR_ID_TO_LABEL[row['ans']]
-        if not label in include_colors:
+        label = row['ans']
+        label_str = COLOR_ID_TO_LABEL[label]
+        if not label_str in include_colors:
             continue
         circle_rgb = json.loads(row['circle_rgb'])
         bg_rgb = json.loads(row['bg_rgb'])
