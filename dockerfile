@@ -52,14 +52,20 @@ RUN conda install --yes -c fastai nbdev
 # https://stackoverflow.com/questions/62325068/cannot-install-latest-nodejs-using-conda-on-mac
 RUN conda install --yes -c conda-forge nodejs'>=12.0.0' --repodata-fn=repodata.json
 RUN conda install -c conda-forge jupyterlab-spellchecker
-RUN jupyter labextension install @axlair/jupyterlab_vim
+#RUN jupyter labextension install jupyterlab_vim
 # For jupyter lab 2.x
 # RUN jupyter labextension install @ijmbarr/jupyterlab_spellchecker
+# From: https://stackoverflow.com/questions/67050036/enable-jupyterlab-extensions-by-default-via-docker
+COPY scripts/jupyter_notebook_config.py /etc/jupyter/
 
 RUN pip install --upgrade pip
 RUN pip install graphviz \
         opencv-python \
+		jupyterlab-vim \
         icecream \
+		torchinfo \
+		deprecated \
+		bidict \ 
         moviepy
 
 # In order to allow the Python package to be edited without
