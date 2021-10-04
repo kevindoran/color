@@ -1,29 +1,97 @@
 FROM pytorch/pytorch 
-# Every thing seems to work a lot easier if we explicitly create a non-root 
-# user. This follows the advice from: https://vsupalov.com/docker-shared-permissions/
-# Creating the user made running Jupiter Lab work.
-# Creating a new (non-root) user makes a lot of things easier:
-# - there will be a home directory with user permissions
-# - no need to manually create a directory to work from
-# - avoid the "no username" being displayed when using iterative mode.
+# I edit the nvimrc too often for it to be a base image.
+# FROM nvimi
 ARG USER_ID=1001
 ARG GROUP_ID=101
-RUN addgroup --gid $GROUP_ID app
-RUN adduser --disabled-password --gecos '' --uid $USER_ID --gid $GROUP_ID app
+ARG USER=app
+ENV USER=$USER
+ARG PROJ_ROOT=/$USER
+# This is for convenience within this dockerfile. If there was a non-argument
+# variable type, I'd use it instead.
+ARG NEOVIM_DIR=/home/$USER/.config/nvim
+
+RUN addgroup --gid $GROUP_ID $USER
+RUN adduser --disabled-password --gecos '' --uid $USER_ID --gid $GROUP_ID $USER
 # When switching to mounting the whole project as a volume, it
 # seemed wrong to mount it at the existing /home/app directory. So,
 # going one level deeper. I think an alternative is to just work from
 # /app, but I think some programs like JupyterLab have some issues
 # when running from outside the home tree.
-#WORKDIR /home/app	
-RUN mkdir app && chown $USER_ID app
-WORKDIR /app	
+WORKDIR /home/$USER
+
+###############################################################################
+#
+# Neovim
+# 	
+###############################################################################
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    software-properties-common && \
+	add-apt-repository ppa:neovim-ppa/unstable
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+	neovim  \
+	git \
+	locales \
+	curl && \
+	rm -rf /var/lib/apt/lists/*
+
+RUN pip install --upgrade pip && \
+	pip install neovim
+
+# Set the locale
+RUN locale-gen en_US.UTF-8  
+ENV LANG en_US.UTF-8  
+ENV LANGUAGE en_US:en  
+ENV LC_ALL en_US.UTF-8  
+
+RUN conda install --yes -c conda-forge nodejs'>=12.12.0' --repodata-fn=repodata.json
+
+###############################################################################
+# 
+# - Neovim
+#   - ctags
+#
+# more info:
+# 	https://github.com/universal-ctags/ctags
+###############################################################################
+RUN apt-get update && apt-get install -y --no-install-recommends \
+	gcc \
+	make \
+	pkg-config \
+	autoconf \ 
+	automake \
+	python3-docutils \
+	libseccomp-dev \
+	libjansson-dev \
+	libyaml-dev \
+	libxml2-dev && \
+	rm -rf /var/lib/apt/lists/*
+
+RUN git clone https://github.com/universal-ctags/ctags.git  && \
+	cd ctags && \
+	./autogen.sh && \
+	./configure && \ 
+	make && \
+	make install && \
+	cd ../  
+
+###############################################################################
+# \ctags
+# \Neovim
+###############################################################################
+
+USER root
+ARG PROJ_ROOT=/app
+
+RUN mkdir $PROJ_ROOT && chown $USER $PROJ_ROOT
+WORKDIR $PROJ_ROOT	
 
 # These next two folders will be where we will mount our local data and out
 # directories. We create them manually (automatic creation when mounting will
 # create them as being owned by root, and then our program cannot use them).
-RUN mkdir data && chown $USER_ID data
-RUN mkdir out && chown $USER_ID out
+RUN mkdir data && chown $USER data
+RUN mkdir out && chown $USER out
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
 	 libsm6 \
@@ -35,7 +103,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN conda config --add channels conda-forge 
 RUN conda install --yes \
-	#nodejs'>=12.0.0' \
 	matplotlib \
 	pandas \
 # Doesn't resolve :(. Using Apt-get instead.
@@ -48,15 +115,10 @@ RUN conda install --yes \
     ipywidgets && \
 	conda clean -ya
 RUN conda install --yes -c fastai nbdev 
-# Custom repodata a temporary fix. See:
-# https://stackoverflow.com/questions/62325068/cannot-install-latest-nodejs-using-conda-on-mac
-RUN conda install --yes -c conda-forge nodejs'>=12.0.0' --repodata-fn=repodata.json
 RUN conda install -c conda-forge jupyterlab-spellchecker
 #RUN jupyter labextension install jupyterlab_vim
-# For jupyter lab 2.x
-# RUN jupyter labextension install @ijmbarr/jupyterlab_spellchecker
 # From: https://stackoverflow.com/questions/67050036/enable-jupyterlab-extensions-by-default-via-docker
-COPY scripts/jupyter_notebook_config.py /etc/jupyter/
+COPY proj/jupyter_notebook_config.py /etc/jupyter/
 
 RUN pip install --upgrade pip
 RUN pip install graphviz \
@@ -68,20 +130,47 @@ RUN pip install graphviz \
 		bidict \ 
         moviepy
 
-# In order to allow the Python package to be edited without
-# a rebuild, install all code as a volume. We will still copy the
-# files initially, so that things like the below pip install can work.
-COPY --chown=$USER_ID ./ ./
-
 # Fix permission issues with ims
 # https://stackoverflow.com/a/54230833/754300
 RUN rm /etc/ImageMagick-6/policy.xml
 
+###############################################################################
+# Neovim
+###############################################################################
+# For some reason, /home/$USER/.config is owned by root. 
+RUN mkdir -p /home/$USER/.config  && chown $USER:$USER /home/$USER/.config
+
+COPY --chown=$USER_ID proj/nvim $NEOVIM_DIR
+
+# Currently, assume that NeoSolarized file is copied.
+# RUN git clone https://github.com/overcache/NeoSolarized.git
+# RUN mkdir -p $NEOVIM_DIR/colors/ && chown $USER_ID $NEOVIM_DIR/colors
+# RUN cp ./NeoSolarized/colors/NeoSolarized.vim $NEOVIM_DIR/colors/
+
+# Switching to our new user. Do this at the end, as we need root permissions 
+# in order to create folders and install things.
+USER $USER
+
+RUN curl -fLo /home/$USER/.local/share/nvim/site/autoload/plug.vim --create-dirs \
+       https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+RUN nvim --headless +PlugInstall +qa
+RUN nvim --headless -c "CocInstall -sync coc-pyright coc-html | qa"
+
+###############################################################################
+# /Neovim
+###############################################################################
+
+USER root
+# In order to allow the Python package to be edited without
+# a rebuild, install all code as a volume. We will still copy the
+# files initially, so that things like the below pip install can work.
+COPY --chown=$USER ./ ./
+
 # Install our own project as a module.
 # This is done so the tests and JupyterLab code can import it.
-ENV DISTUTILS_DEBUG=1
 RUN pip install -e ./nncolor
 
 # Switching to our new user. Do this at the end, as we need root permissions 
 # in order to create folders and install things.
-USER app
+USER $USER
+

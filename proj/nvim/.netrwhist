@@ -1,0 +1,8 @@
+let g:netrw_dirhistmax  =10
+let g:netrw_dirhistcnt =6
+let g:netrw_dirhist_6='/home/k/projects/colorspace_git'
+let g:netrw_dirhist_5='/home/k/Dropbox/projects/blog'
+let g:netrw_dirhist_4='/home/k/Dropbox/projects/blog/scripts'
+let g:netrw_dirhist_3='/home/k/blog/scripts'
+let g:netrw_dirhist_2='/home/k/blog'
+let g:netrw_dirhist_1='/home/k'
