@@ -1,7 +1,6 @@
 docker run \
--it \
 --name="nvim-$(date +%s)" \
 -v $(pwd):/app \
 -p 0.0.0.0:4488:4488 \
 csi \
-nvim 
+nvim --listen 0.0.0.0:4488 --headless </dev/null >/dev/null 

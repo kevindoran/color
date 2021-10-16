@@ -41,6 +41,7 @@ Plug 'pangloss/vim-javascript'
 Plug 'troydm/zoomwintab.vim'
 "Plug 'numirias/semshi', {'do': ':UpdateRemotePlugins'}
 Plug 'jszakmeister/vim-togglecursor'
+Plug 'equalsraf/neovim-gui-shim'
 call plug#end()          
 filetype plugin indent on   
 
@@ -269,11 +270,12 @@ nmap <silent> ]g <Plug>(coc-diagnostic-next)
 " GoTo code navigation.
 nmap <silent> gd <Plug>(coc-definition)
 nmap <silent> gy <Plug>(coc-type-definition)
-nmap <silent> gi <Plug>(coc-implementation)
+nmap <silent> gl <Plug>(coc-implementation)
 nmap <silent> gr <Plug>(coc-references)
 
-" Use K to show documentation in preview window.
-nnoremap <silent> K :call <SID>show_documentation()<CR>
+" Show documentation in preview window.
+" Originally, 'gh' starts "select mode" which is a bit of a useless feature.
+nnoremap <silent> gh :call <SID>show_documentation()<CR>
 
 function! s:show_documentation()
   if (index(['vim','help'], &filetype) >= 0)
