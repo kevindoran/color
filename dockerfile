@@ -128,11 +128,20 @@ RUN pip install graphviz \
 		torchinfo \
 		deprecated \
 		bidict \ 
-        moviepy
+        moviepy \
+		pytest \
+		mypy 
 
 # Fix permission issues with ims
 # https://stackoverflow.com/a/54230833/754300
 RUN rm /etc/ImageMagick-6/policy.xml
+
+
+
+# OpenCV doesn't have pyright support. 
+# Fix. https://github.com/microsoft/pylance-release/issues/138
+# mypy is installed with pip above for this usecase.
+RUN stubgen -m cv2 -o $(python -c 'import cv2, os; print(os.path.dirname(cv2.__file__))')
 
 ###############################################################################
 # Neovim

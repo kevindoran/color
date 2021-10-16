@@ -23,6 +23,7 @@ DEFAULT_RADIUS = int(DEFAULT_IMG_SHAPE[0] / (2 * DEFAULT_ROW_LEN)) # 28
 assert DEFAULT_ROW_LEN == 4
 assert DEFAULT_RADIUS == 28
 COLOR_ID_TO_LABEL = bidict({0: 'orange', 1: 'brown', 2: 'both', 3: 'neither'})
+LABEL_TO_COLOR_ID = COLOR_ID_TO_LABEL.inverse
 NUM_CLASSES = len(COLOR_ID_TO_LABEL)
 COLOR_DIM = 3
 
@@ -88,34 +89,67 @@ def random_color() -> ColorOption:
 
 
 def cell_shape(grid_shape, img_shape):
-    ans  = np.array([img_shape[0] / (grid_shape[0] + 1), 
-                     img_shape[1] / (grid_shape[1] + 1)])
+    """Calculates the length in pixels of dimensions of a grid cell."""
+    ans  = np.array([img_shape[0] / (grid_shape[0]), 
+                     img_shape[1] / (grid_shape[1])])
     return ans
+
+
+def position_idx(grid_coord, grid_shape):
+    """Convert from coord to index.
+
+    Origin is top left.
+
+    Example:
+    (0, 1) (0, 2) (0, 3)      0  1  2        
+    (1, 1) (1, 2) (1, 3)  →   3  4  5       
+    (2, 1) (3, 2) (2, 3)      6  7  8        
+    (3, 1) (3, 2) (3, 3)      9  10 11       
+          ⋮                      ⋮           
+    """
+    idx = grid_coord[0] * grid_shape[1] + grid_coord[1]
+    return idx
 
 
 def grid_coords(position_idx : int, grid_shape):
     """Calculates the (y, x) grid-coordinates of a position index.
     
     Origin is top left.
+
+    Example:
+    0  1  2        (0, 1) (0, 2) (0, 3) 
+    3  4  5    →   (1, 1) (1, 2) (1, 3) 
+    6  7  8        (2, 1) (3, 2) (2, 3) 
+    9  10 11       (3, 1) (3, 2) (3, 3) 
+       ⋮                 ⋮                
     """
     num_positions = grid_shape[0]*grid_shape[1]
     if not 0 <= position_idx < num_positions:
         raise Exception(f'Position index must be within 0 and {num_positions}. '
                         'Got: {position_idx}')
-    grid_coord = np.array([position_idx % grid_shape[0],
-                           position_idx // grid_shape[0]])
+    grid_coord = np.array([position_idx // grid_shape[1],
+                           position_idx %  grid_shape[1]])
     return grid_coord
 
-def coords(position_idx : int, grid_shape, img_shape):
-    """Calculates the (y, x) image coordinates of a position index.
+
+def grid_to_img_coords(g_coords, grid_shape, img_shape):
+    """Calculates the (y, x) cell center image coordinates of a grid coordinate.
     
     Origin is top left.
     """
     spacing = cell_shape(grid_shape, img_shape)
+    coord = np.around(g_coords * spacing + spacing/2).astype(np.int)
+    return coord
+
+
+def img_coords(position_idx : int, grid_shape, img_shape):
+    """Calculates the (y, x) cell center image coordinates of a position index.
+    
+    Origin is top left.
+    """
     g_coords = grid_coords(position_idx, grid_shape)
     # Rounding? Do or don't?
-    coord = np.around(g_coords * spacing + spacing).astype(np.int)
-    return coord
+    return grid_to_img_coords(g_coords, grid_shape, img_shape)
 
 
 def to_cv2_coords(numpy_coords):
@@ -131,7 +165,7 @@ def circle_img(circle_color, bg_color, radius, grid_shape, position_idx,
                         f'(got: {np.shape(img_shape)})')
     img = np.zeros(img_shape, np.float32)
     img[:] = bg_color
-    center = to_cv2_coords(coords(position_idx, grid_shape, img_shape))
+    center = to_cv2_coords(img_coords(position_idx, grid_shape, img_shape))
     img = cv2.circle(img, center, radius, circle_color, thickness=-1, 
             lineType=cv2.LINE_AA)
     return img
@@ -146,6 +180,92 @@ def label_grid(color_id, grid_shape, position_idx):
     return res
 
 
+def mask_grid(grid_shape, position_idx):
+    """Returns a mask; all values are zero except for the dot position (1)."""
+    res = np.zeros(grid_shape)
+    g_coords = grid_coords(position_idx, grid_shape)
+    res[tuple(g_coords)] = 1
+    return res
+
+
+def linear(t: float) -> float:
+    """Linear rate function."""
+    return t
+
+
+def ease_in_out_sine(t : float) -> float:
+    """Slow start, slow end sine rate function."""
+    t = np.clip(t, 0, 1)
+    return -(np.cos(np.pi * t) - 1) / 2
+
+
+def radial_weight(grid_shape, position_idx, max_dist, rate_fctn):
+    """Returns a weight grid useful for training.
+
+    Taking in a rate function, like the ones here:
+    https://docs.manim.community/en/stable/reference/manim.utils.rate_functions.html
+    """
+    g_coord = grid_coords(position_idx, grid_shape)
+    y_ticks = np.arange(grid_shape[0])
+    x_ticks = np.arange(grid_shape[1])
+    yv, xv, = np.meshgrid(y_ticks, x_ticks, indexing='ij')
+    dist = np.sqrt(np.square(yv - g_coord[0]) + np.square(xv - g_coord[1]))
+    dist /= max_dist
+    weighting = rate_fctn(dist)
+    total_weight = np.sum(weighting)
+    weighting[tuple(g_coord)] = total_weight
+    return weighting
+
+
+def radial_weight_for_every_pos(grid_shape, max_dist, rate_fctn):
+    """Repeat radial_weighted_loss, for every dot position."""
+    num_positions = np.prod(grid_shape)
+    res = np.zeros((num_positions, *grid_shape))
+    for i in range(num_positions):
+        res[i] = radial_weight(grid_shape, i, max_dist, rate_fctn)
+    return res
+
+
+def draw_overlay(img, labels):
+    """Draw a grid overlay with labels."""
+    color = (0, 0, 255)
+    grid_shape = labels.shape
+    # Spacing is HxW, but cv2 uses (x, y) point coordinates!
+    spacing = cell_shape(grid_shape, img.shape)
+    # Horizontal lines.
+    h = spacing[0] 
+    while h < img.shape[0]:
+        # Sad that cv2 requires rounding. Would prefer an anti-aliased sample
+        # from an arbitrary line.
+        cv2.line(img, (0, round(h)), (img.shape[1], round(h)), 
+                color, thickness=1)
+        h += spacing[0]
+    # Vertical lines
+    v = spacing[1] 
+    while v < img.shape[0]:
+        # Sad that cv2 requires rounding. Would prefer an anti-aliased sample
+        # from an arbitrary line.
+        cv2.line(img, (round(v), 0), (round(v), img.shape[1]), 
+                color, thickness=1)
+        v += spacing[0]
+    # Labels
+    spacing = cell_shape(grid_shape, img.shape)
+    for iy, ix in np.ndindex(labels.shape):
+        padding_offset = 0.1
+        cell_lower_left = np.around(np.array(
+            [iy + 1.0 - padding_offset, ix + padding_offset])
+            * spacing).astype(np.int)
+        cell_lower_left = np.flip(cell_lower_left)
+        color = (0, 0, 255)
+        font_scale = 0.6
+        thickness = 1
+        cv2.putText(img, str(labels[iy,ix]), cell_lower_left, 
+                cv2.FONT_HERSHEY_SIMPLEX, 
+                font_scale, color, thickness, cv2.LINE_AA) 
+
+    return img
+
+    
 class DotImgGen:
     """Wraps cricle_img to reduce function parameters.
 
@@ -213,9 +333,11 @@ class ColorDotDataset(torch.utils.data.Dataset):
         label, circle_rgb, bg_rgb = self._labelled_colors[color_idx]
         img = self._img_gen.gen(circle_rgb, bg_rgb, self.dot_radius, pos)
         label_g = label_grid(label, self.grid_shape, pos)
+        mask_g = mask_grid(self.grid_shape, pos)
         if self.transform:
             img = self.transform(img)
-        return {'image': img, 'label': label, 'label_grid': label_g}
+        return {'image': img, 'label': label, 'label_grid': label_g, 
+                'position': pos, 'mask_grid': mask_g}
         #return (img, label)
     
     
