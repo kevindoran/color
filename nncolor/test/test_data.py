@@ -42,7 +42,7 @@ def test_grid_coords():
     assert np.array_equal(nc.data.grid_coords(7, shape), (2, 1))
 
 
-def test_radial_weighted_loss():
+def test_radial_weight():
     # 1.
     # Setup
     grid_shape = (5, 5)
@@ -60,7 +60,7 @@ def test_radial_weighted_loss():
         [1, 1,  1,  1,  1]])
 
     # Test
-    res = nc.data.radial_weighted_loss(grid_shape, pos_idx1, max_dist, ease_fn)
+    res = nc.data.radial_weight(grid_shape, pos_idx1, max_dist, ease_fn)
     assert np.allclose(res, ans1)
 
     # 2.
@@ -78,9 +78,32 @@ def test_radial_weighted_loss():
     assert np.allclose(res, ans2)
 
     # 3.
-    res = nc.data.loss_for_every_pos(grid_shape, max_dist, ease_fn)
+    res = nc.data.radial_weight_for_every_pos(grid_shape, max_dist, ease_fn)
     assert np.allclose(res[pos_idx1], ans1)
     assert np.allclose(res[pos_idx2], ans2)
+
+
+#def test_datasets():
+#    colors = nc.data.exp_1_1_data_filtered
+#    grid_shape = (7,7)
+#    num_elements = np.prod(grid_shape)
+#    train_ds, test_ds, val_ds = nc.data.train_test_val_split(
+#            colors, dot_radius=10, grid_shape=grid_shape)
+#    dsl = [train_ds, test_ds, val_ds]
+#    
+#
+#    # Test that the correct number of images for each color have been created.
+#    for ds in dsl:
+#        import pdb; pdb.set_trace();
+#        color_tally = ds._labelled_colors['ans'].value_counts().to_dict()
+#        img_label_tally = {k:0 for k in color_tally.keys()}
+#        for sample in ds:
+#            label = sample['label']
+#            img_label_tally[label] = img_label_tally[label] + 1
+#        for k,v in color_tally.items():
+#            assert img_label_tally[k] == v*num_elements
+
+
 
 
 

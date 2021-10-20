@@ -69,6 +69,10 @@ def _brown_rgbs():
     return exp_1_1_data.loc[lambda r:r['ans'] == 1, :]
 
 
+def color_id_to_rgbs(idx : int):
+    return exp_1_1_data.loc[lambda r:r['ans'] == idx, :]
+
+
 def _random_color(rgbs) -> ColorOption:
     """Chose a random color from the colors given.""" 
     idx = random.randrange(0, rgbs.shape[0])
@@ -251,11 +255,17 @@ def draw_overlay(img, labels):
     # Labels
     spacing = cell_shape(grid_shape, img.shape)
     for iy, ix in np.ndindex(labels.shape):
+        # Why isn't flip correct? This is suggestive of a bug somewhere,
+        # or my misunderstanding of the indexing for cv2.
+        # padding_offset = 0.1
+        #cell_lower_left = np.flip(cell_lower_left)
+        #cell_lower_left = np.around(np.array(
+        #    [iy + 1.0 - padding_offset, ix + padding_offset])
+        #   * spacing).astype(np.int)
         padding_offset = 0.1
         cell_lower_left = np.around(np.array(
-            [iy + 1.0 - padding_offset, ix + padding_offset])
+            [iy + padding_offset, ix +1.0 - padding_offset])
             * spacing).astype(np.int)
-        cell_lower_left = np.flip(cell_lower_left)
         color = (0, 0, 255)
         font_scale = 0.6
         thickness = 1
@@ -313,8 +323,8 @@ class ColorDotDataset(torch.utils.data.Dataset):
             raise Exception("Only 2D grids are supported.")
         self.grid_shape = grid_shape
         self._rng = np.random.default_rng(123)
-        self._shuffled_idxs = self._rng.integers(low=0, 
-                high=self.__len__(), size=self.__len__())
+        self._shuffled_idxs = np.arange(self.__len__())
+        self._rng.shuffle(self._shuffled_idxs)
         self._img_gen = DotImgGen(self.grid_shape, 
                 self.img_shape, self.dot_radius)
         
@@ -343,7 +353,7 @@ class ColorDotDataset(torch.utils.data.Dataset):
     
 def train_test_val_split(labelled_colors, 
         dot_radius=DEFAULT_RADIUS, grid_shape=DEFAULT_GRID_SHAPE, 
-        img_shape=DEFAULT_IMG_SHAPE, split_ratio=[6, 2, 1]):
+        img_shape=DEFAULT_IMG_SHAPE, split_ratio=[11, 6, 1]):
     divisions = np.sum(np.array(split_ratio))
     num_per_division = len(labelled_colors) // divisions
     remainder = len(labelled_colors) % divisions

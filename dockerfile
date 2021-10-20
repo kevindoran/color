@@ -134,6 +134,7 @@ RUN pip install graphviz \
 		bidict \ 
         moviepy \
 		pytest \
+		ipyplot \
 		mypy 
 
 # Fix permission issues with ims
