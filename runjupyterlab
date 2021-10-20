@@ -2,6 +2,7 @@
 #docker rm csj
 docker run -it \
 --gpus all \
+--ipc=host \
 --name="csj-jupyter-$(date +%s)" \
 -v $(pwd):/app \
 -v /media/disk2/:/data \

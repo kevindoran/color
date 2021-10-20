@@ -2,6 +2,7 @@
 #docker rm csj
 docker run -it \
 --name csj \
+--ipc=host \
 -v $(pwd)/notebooks:/home/app/notebooks \
 -p 0.0.0.0:8888:8888 \
 csi \

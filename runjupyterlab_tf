@@ -2,6 +2,7 @@
 docker run -it \
 --gpus all \
 --name colortf \
+--ipc=host \
 -v $(pwd)/notebooks:/home/app/notebooks \
 -v /media/disk2/:/home/app/data \
 -p 0.0.0.0:8888:8888 \
