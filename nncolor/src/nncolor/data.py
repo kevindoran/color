@@ -13,6 +13,8 @@ import torch
 from icecream import ic
 from deprecated import deprecated
 from bidict import bidict
+import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 DEFAULT_GRID_SHAPE = (4,4)
 DEFAULT_NUM_POSITIONS = np.prod(DEFAULT_GRID_SHAPE)
@@ -71,6 +73,30 @@ def _brown_rgbs():
 
 def color_id_to_rgbs(idx : int):
     return exp_1_1_data.loc[lambda r:r['ans'] == idx, :]
+
+
+def color_legend():
+    """Creates a Matplotlib figure showing the color codes used."""
+    orange_marker_color = '#ffa219'
+    brown_marker_color = '#473d28'
+    both_marker_color = '#9c7741'
+    neither_marker_color = '#dddec9'
+    # orange, brown, both, neither
+    colors_as_vec = np.array([[
+        mpl.colors.to_rgb(c) for c in (
+            orange_marker_color, 
+            brown_marker_color, 
+            both_marker_color, 
+            neither_marker_color)
+        ]])
+    fig, ax = plt.subplots()
+    ax.imshow(colors_as_vec)
+    ax.set_xticklabels(['orange', 'brown', 'both', 'neither'])
+    plt.xticks(np.arange(0, 4, 1.0))
+    ax.get_yaxis().set_visible(False)
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor");
+    ax.set_title("Figure color map");
+    return fig
 
 
 def _random_color(rgbs) -> ColorOption:
@@ -231,8 +257,13 @@ def radial_weight_for_every_pos(grid_shape, max_dist, rate_fctn):
 
 
 def draw_overlay(img, labels):
-    """Draw a grid overlay with labels."""
-    color = (0, 0, 255)
+    """Draw a grid overlay with labels.
+    
+    Args:
+        img: image as numpy array, with 0-1 color values.
+        labels: color labels for each grid cell.
+    """
+    color = [0.0, 0.0, 1.0]
     grid_shape = labels.shape
     # Spacing is HxW, but cv2 uses (x, y) point coordinates!
     spacing = cell_shape(grid_shape, img.shape)
@@ -266,13 +297,12 @@ def draw_overlay(img, labels):
         cell_lower_left = np.around(np.array(
             [iy + padding_offset, ix +1.0 - padding_offset])
             * spacing).astype(np.int)
-        color = (0, 0, 255)
         font_scale = 0.6
         thickness = 1
         cv2.putText(img, str(labels[iy,ix]), cell_lower_left, 
                 cv2.FONT_HERSHEY_SIMPLEX, 
                 font_scale, color, thickness, cv2.LINE_AA) 
-
+    # Urh. Why can't we have float colors with cv2.
     return img
 
     
