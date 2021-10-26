@@ -383,7 +383,7 @@ class ColorDotDataset(torch.utils.data.Dataset):
     
 def train_test_val_split(labelled_colors, 
         dot_radius=DEFAULT_RADIUS, grid_shape=DEFAULT_GRID_SHAPE, 
-        img_shape=DEFAULT_IMG_SHAPE, split_ratio=[11, 6, 1]):
+        img_shape=DEFAULT_IMG_SHAPE, split_ratio=(11, 6, 1)):
     divisions = np.sum(np.array(split_ratio))
     num_per_division = len(labelled_colors) // divisions
     remainder = len(labelled_colors) % divisions
