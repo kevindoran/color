@@ -118,11 +118,14 @@ RUN conda install --yes -c fastai nbdev
 RUN conda install -c conda-forge jupyterlab-spellchecker
 #RUN jupyter labextension install jupyterlab_vim
 # From: https://stackoverflow.com/questions/67050036/enable-jupyterlab-extensions-by-default-via-docker
-COPY proj/jupyter_notebook_config.py /etc/jupyter/
+COPY --chown=$USER proj/jupyter_notebook_config.py /etc/jupyter/
 # Try to get Jupyter Lab to allow extensions on startup.
 # This file was found by diffing a container running jupyterlab that had 
 # extensions manually enabled.
-COPY proj/plugin.jupyterlab-settings /home/$USER/.jupyter/lab/user-settings/@jupyterlab/extensionmanager-extension/
+COPY --chown=$USER proj/plugin.jupyterlab-settings /home/$USER/.jupyter/lab/user-settings/@jupyterlab/extensionmanager-extension/
+# Getting some permission errors printed in terminal after running Jupyter Lab, 
+# and trying the below line to fix:
+RUN chown -R $USER:$USER /home/$USER/.jupyter
 
 RUN pip install --upgrade pip
 RUN pip install graphviz \
