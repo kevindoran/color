@@ -75,19 +75,38 @@ def color_id_to_rgbs(idx : int):
     return exp_1_1_data.loc[lambda r:r['ans'] == idx, :]
 
 
-def color_legend():
-    """Creates a Matplotlib figure showing the color codes used."""
+def color_counts(color_data):
+    """Calculates the number of color codes of each color class.
+    
+    Args:
+      color_data: pandas table, like exp_1_1_data.
+
+    Returns a numpy array of shape (NUM_CLASSES,)
+    """
+    labels = np.array([c[0] for c in color_data])
+    unique, counts = np.unique(labels, return_counts=True)
+    res = np.zeros(NUM_CLASSES)
+    res.put(unique, counts)
+    return res
+
+
+def plot_colors():
     orange_marker_color = '#ffa219'
     brown_marker_color = '#473d28'
     both_marker_color = '#9c7741'
     neither_marker_color = '#dddec9'
+    ans = np.array([orange_marker_color, 
+           brown_marker_color,
+           both_marker_color,
+           neither_marker_color])
+    return ans
+
+
+def color_legend():
+    """Creates a Matplotlib figure showing the color codes used."""
     # orange, brown, both, neither
     colors_as_vec = np.array([[
-        mpl.colors.to_rgb(c) for c in (
-            orange_marker_color, 
-            brown_marker_color, 
-            both_marker_color, 
-            neither_marker_color)
+        mpl.colors.to_rgb(c) for c in plot_colors()
         ]])
     fig, ax = plt.subplots()
     ax.imshow(colors_as_vec)
@@ -383,7 +402,7 @@ class ColorDotDataset(torch.utils.data.Dataset):
     
 def train_test_val_split(labelled_colors, 
         dot_radius=DEFAULT_RADIUS, grid_shape=DEFAULT_GRID_SHAPE, 
-        img_shape=DEFAULT_IMG_SHAPE, split_ratio=(11, 6, 1)):
+        img_shape=DEFAULT_IMG_SHAPE, split_ratio=(10, 6, 2)):
     divisions = np.sum(np.array(split_ratio))
     num_per_division = len(labelled_colors) // divisions
     remainder = len(labelled_colors) % divisions

@@ -83,6 +83,18 @@ def test_radial_weight():
     assert np.allclose(res[pos_idx2], ans2)
 
 
+
+def test_color_counts():
+    # Setup
+    colors = nc.data.exp_1_1_data_filtered
+    # Precomputed counts:
+    ans = np.array([39, 29, 0, 148])
+
+    # Test
+    res = nc.data.color_counts(colors)
+    assert np.array_equal(ans, res)
+
+
 #def test_datasets():
 #    colors = nc.data.exp_1_1_data_filtered
 #    grid_shape = (7,7)

@@ -138,6 +138,8 @@ RUN pip install graphviz \
         moviepy \
 		pytest \
 		ipyplot \
+		htmlmin \
+		xarray \
 		mypy 
 
 # Fix permission issues with ims
