@@ -140,6 +140,7 @@ RUN pip install graphviz \
 		ipyplot \
 		htmlmin \
 		xarray \
+		einops \
 		mypy 
 
 # Fix permission issues with ims
