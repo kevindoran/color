@@ -4,3 +4,7 @@ out
 *.swo
 *.pyc
 **/.ipynb_checkpoints/
+notebooks/resources/
+proj/fastai_docker
+imagenet-fast/
+pytorch-image-models/

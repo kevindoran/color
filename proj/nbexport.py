@@ -52,7 +52,7 @@ class Sanitize(nbc.preprocessors.Preprocessor):
         if cell.cell_type == 'code':
             for output in cell.get('outputs', []):
                 #import pdb; pdb.set_trace();
-                if output.output_type == 'display_data' \
+                if output.output_type in {'display_data', 'execute_result'} \
                         and 'text/html' in output.data:
                     output.data['text/html'] = output.data['text/html'].replace('\n\n', '\n')
                     output.data['text/html'] = htmlmin.minify(output.data['text/html'], remove_empty_space=True)

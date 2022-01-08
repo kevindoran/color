@@ -15,6 +15,10 @@ from deprecated import deprecated
 from bidict import bidict
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import sklearn as sk
+import sklearn.metrics
+import sklearn.linear_model
+import colorsys
 
 DEFAULT_GRID_SHAPE = (4,4)
 DEFAULT_NUM_POSITIONS = np.prod(DEFAULT_GRID_SHAPE)
@@ -28,13 +32,70 @@ COLOR_ID_TO_LABEL = bidict({0: 'orange', 1: 'brown', 2: 'both', 3: 'neither'})
 LABEL_TO_COLOR_ID = COLOR_ID_TO_LABEL.inverse
 NUM_CLASSES = len(COLOR_ID_TO_LABEL)
 COLOR_DIM = 3
+DEFAULT_SPLIT = (10, 6, 2)
 
 
 # Load experiment data.
 # Reference:
 # https://github.com/wimglenn/resources-example/blob/master/myapp/example4.py
+"""
+It's worth noting that the naming convention for the data files is not 
+consistent with the experiment naming. I should have named the first
+data file as experiment_1.csv. But I'll keep it as it is, as many notebooks
+rely on it.
+"""
 with importlib.resources.open_text("nncolor.pkdata", 'experiment_1_1_1.csv') as f:
-    exp_1_1_data = pd.read_csv(f)
+    exp_1_1_1_data = pd.read_csv(f)
+
+"""
+The original exp_1_1_1_data had two problems:
+    - it recorded the initial starting stimulus (red circle, white background) 
+      with a classification of "brown". This is a mistake.
+    - it used a non-flat structure which make loading it a slight hassle in 
+      comparison to a simple flat format.
+
+With these issues in mind, the file was updated by removing the first
+data entry, and by reformatting the file. This result is stored in 
+experiment_1_1_1_v2.
+"""
+with importlib.resources.open_text("nncolor.pkdata", 'experiment_1_1_1_v2.csv') as f:
+    exp_1_1_1_v2_data = pd.read_csv(f)
+
+"""
+Experiment 1.1.2 recorded ~1000 entries. It was collected on a separate day.
+"""
+with importlib.resources.open_text("nncolor.pkdata", 'experiment_1_1_2.csv') as f:
+    exp_1_1_2_data = pd.read_csv(f)
+
+"""
+All experiment data are combined into the table below. This currently includes 
+data from experiment_1_1_1_v2 and experiment_1_1_2.
+"""
+with importlib.resources.open_text("nncolor.pkdata", 'experiment_1_1_combined.csv') as f:
+    exp_1_1_combined_data = pd.read_csv(f)
+
+
+"""
+The variable used for experiment 1.1.1 data was originally called exp_1_1_data.
+For backward compatibility, we will allow this identifier to continue to refer 
+to exp_1_1_1_data.
+"""
+exp_1_1_data = exp_1_1_1_data
+
+
+def split(data, split_ratio=DEFAULT_SPLIT):
+    """Splits the data into train, test and val."""
+    divisions = np.sum(np.array(split_ratio)) 
+    num_per_division = len(data) // divisions
+    remainder = len(data) % divisions
+    num_train = num_per_division * split_ratio[0] + remainder
+    num_test = num_per_division * split_ratio[1]
+    num_val = num_per_division * split_ratio[2]
+    train_data = data[0:num_train]
+    test_data = data[num_train:num_train + num_test]
+    val_data = data[num_train + num_test:]
+    assert len(val_data) + len(test_data) + len(train_data) == len(data)
+    return train_data, test_data, val_data
 
 
 def filter_colors(table, include_colors):
@@ -52,9 +113,80 @@ def filter_colors(table, include_colors):
         ans.append((label, circle_rgb, bg_rgb))
     return ans
 
-
 exp_1_1_data_filtered = filter_colors(exp_1_1_data, 
         include_colors={'orange', 'brown', 'neither'})
+
+
+def deserialize(table):
+    """Convert Pandas data to a nested list: [ans, [r,g,b], [r,g,b]].
+
+    The returned list is of the form:
+        [
+        (answer id, circle rgb, background rgb),
+        (answer id, circle rgb, background rgb),
+        ...
+        ]
+    """
+    res = []
+    for idx, row in table.iterrows():
+        res.append((int(row['ans']), [row['circle_r'], row['circle_g'], 
+            row['circle_b']], [row['bg_r'], row['bg_g'], row['bg_b']]))
+    return res
+
+
+def exp_data_in_hsv(data):
+	"""Convert the Pandas data table to use HSV values instead of RGB."""
+	data_hsv = pd.concat([pd.DataFrame([
+		[row['ans'], *colorsys.rgb_to_hsv(*json.loads(row['circle_rgb'])), *colorsys.rgb_to_hsv(*json.loads(row['bg_rgb']))]],
+		columns=['ans', 'circle hue', 'circle sat', 'circle val', 'bg hue', 'bg sat', 'bg val'])
+	 for idx, row in data.iterrows()])
+	return data_hsv
+
+
+class UnwantedColorFilter:
+	"""Creates a test to ignore color pairs that we are not interested in."""
+	
+	def __init__(self):
+		# Choose a class weight that results in 100% recall. Trial and error
+		# gives us 1:9.
+		class_0_colors = (3,)
+		class_1_colors = (0, 1, 2) 
+		class_weight = {0:1, 1:9}	
+		self.model = sk.linear_model.LogisticRegression(
+			solver='liblinear',
+			class_weight=class_weight)
+		X, y = UnwantedColorFilter.data_as_Xy(class_0_colors, class_1_colors)
+		self.model.fit(X, y)
+		y_predict = self.model.predict(X)
+		recall = sk.metrics.recall_score(y, y_predict)
+		if recall != 1.0:
+			raise Exception("The recall is expected to be zero. Maybe the " 
+							"class weight needs to be updated. We don't want " 
+							"any false negatives (false positives are fine).")
+
+	@staticmethod
+	def data_as_Xy(class_0, class_1):
+		all_classes = class_0 +  class_1
+		data_hsv = exp_data_in_hsv(exp_1_1_data)
+		filtered = data_hsv[data_hsv['ans'].isin(all_classes)]
+		X =  data_hsv[['circle hue', 'circle sat', 'circle val', 
+   					   'bg val']].to_numpy()
+		y = filtered['ans']
+		y = y.apply(lambda i : 0 if i in class_0 else 1)
+		return X, y
+
+	def is_neither_with_high_confidence(self, circle_rgb, background_rgb):
+		c_hsv = colorsys.rgb_to_hsv(*circle_rgb)
+		bg_hsv = colorsys.rgb_to_hsv(*background_rgb)
+		res = not self.model.predict(np.array([[*c_hsv, bg_hsv[0]]]))
+		return res
+
+_unwanted_color_filter = UnwantedColorFilter()
+
+
+def is_neither_with_high_confidence(circle_rgb, background_rgb):
+	return _unwanted_color_filter.is_neither_with_high_confidence(
+		circle_rgb, background_rgb)
 
 
 class ColorOption:
@@ -205,16 +337,20 @@ def to_cv2_coords(numpy_coords):
     """CV2 uses (x, y) order."""
     return (numpy_coords[1], numpy_coords[0])
     
-    
-def circle_img(circle_color, bg_color, radius, grid_shape, position_idx, 
-        img_shape):
+
+def circle_img(circle_color, bg_color, radius, grid_shape, position, 
+        img_shape, pos_offset=None):
     """Create a circle-background image."""
     if np.shape(img_shape) != (3,):
         raise Exception(f'Expected img_shape to be 3 dimensions '
                         f'(got: {np.shape(img_shape)})')
     img = np.zeros(img_shape, np.float32)
     img[:] = bg_color
-    center = to_cv2_coords(img_coords(position_idx, grid_shape, img_shape))
+    if grid_shape != None:
+        center = to_cv2_coords(img_coords(position, grid_shape, img_shape)) 
+        center = np.array(center) + np.array(pos_offset)
+    else:
+        center = position
     img = cv2.circle(img, center, radius, circle_color, thickness=-1, 
             lineType=cv2.LINE_AA)
     return img
@@ -330,14 +466,15 @@ class DotImgGen:
 
     We could use patials for this, but it's hard to figure out parameter 
     orders then.""" 
-    def __init__(self, grid_shape, img_shape, dot_radius):
+    def __init__(self, grid_shape, img_shape, dot_radius, dot_offset):
         self.grid_shape = grid_shape
         self.img_shape = img_shape
         self.dot_radius = dot_radius
+        self.dot_offset = dot_offset
 
     def gen(self, circle_color, bg_color, radius, pos):
         return circle_img(circle_color, bg_color, radius, self.grid_shape,
-            pos, self.img_shape)
+            pos, self.img_shape, self.dot_offset)
 
 
 def create_samples(num_samples, radius=DEFAULT_RADIUS, 
@@ -360,7 +497,7 @@ class ColorDotDataset(torch.utils.data.Dataset):
     
     def __init__(self, labelled_colors, dot_radius=DEFAULT_RADIUS, 
             grid_shape=DEFAULT_GRID_SHAPE, img_shape=DEFAULT_IMG_SHAPE, 
-            transform=None):
+            transform=None, dot_offset=0.0):
         """Generate dataset from an array of (label, circle_rgb, bg_rgb) tuples.
         """
         self._labelled_colors = labelled_colors
@@ -371,12 +508,13 @@ class ColorDotDataset(torch.utils.data.Dataset):
         if len(grid_shape) != 2:
             raise Exception("Only 2D grids are supported.")
         self.grid_shape = grid_shape
+        self.dot_offset = dot_offset
         self._rng = np.random.default_rng(123)
         self._shuffled_idxs = np.arange(self.__len__())
         self._rng.shuffle(self._shuffled_idxs)
         self._img_gen = DotImgGen(self.grid_shape, 
-                self.img_shape, self.dot_radius)
-        
+                self.img_shape, self.dot_radius, self.dot_offset)
+
     def __len__(self):
         return len(self._labelled_colors) * self.num_positions()
 
@@ -402,20 +540,14 @@ class ColorDotDataset(torch.utils.data.Dataset):
     
 def train_test_val_split(labelled_colors, 
         dot_radius=DEFAULT_RADIUS, grid_shape=DEFAULT_GRID_SHAPE, 
-        img_shape=DEFAULT_IMG_SHAPE, split_ratio=(10, 6, 2)):
-    divisions = np.sum(np.array(split_ratio))
-    num_per_division = len(labelled_colors) // divisions
-    remainder = len(labelled_colors) % divisions
-    num_train = num_per_division * split_ratio[0] + remainder
-    num_test = num_per_division * split_ratio[1]
-    num_val = num_per_division * split_ratio[2]
-    
-    train_ds = ColorDotDataset(labelled_colors[0: num_train], 
-            dot_radius, grid_shape, img_shape)
-    test_ds = ColorDotDataset(labelled_colors[num_train: num_train + num_test],
-            dot_radius, grid_shape, img_shape)
-    val_ds = ColorDotDataset(labelled_colors[num_train + num_test:],
-            dot_radius, grid_shape, img_shape)
+        img_shape=DEFAULT_IMG_SHAPE, split_ratio=(10, 6, 2), dot_offset=(0,0)):
+    train_data, test_data, val_data = split(labelled_colors, split_ratio)
+    train_ds = ColorDotDataset(train_data, dot_radius, grid_shape, img_shape, 
+            dot_offset=dot_offset)
+    test_ds = ColorDotDataset(test_data, dot_radius, grid_shape, img_shape, 
+            dot_offset=dot_offset)
+    val_ds = ColorDotDataset(val_data, dot_radius, grid_shape, img_shape, 
+                dot_offset=dot_offset)
     return (train_ds, test_ds, val_ds)
 
 

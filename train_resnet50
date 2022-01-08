@@ -1,0 +1,11 @@
+#!/bin/bash
+#docker rm csj
+docker run -it \
+--ipc=host \
+--gpus all \
+--name="csj-runcmd-$(date +%s)" \
+-v $(pwd):/app \
+-v /media/disk2/:/data \
+csi \
+python ./scripts/train_resnet.py --gpu=0  --arch=resnet50 --batch-size=64 /data/imagenet/2012/
+

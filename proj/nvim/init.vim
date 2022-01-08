@@ -1,11 +1,6 @@
 set nocompatible       
 filetype off         
 
-" Run PlugInstall if there are missing plugins
-"autocmd VimEnter * if len(filter(values(g:plugs), '!isdirectory(v:val.dir)'))
-"\| PlugInstall --sync | source $MYVIMRC
-"\| endif
-
 if has('nvim')
 	call plug#begin(stdpath('data') .'/plugged')
 else 
@@ -13,8 +8,7 @@ else
 endif
 
 if has('nvim')
-	" The colorscheme file is manually copied to .config/nvim/colors/
-	"Plug 'overcache/NeoSolarized'
+	Plug 'overcache/NeoSolarized'
 else
 	Plug 'lifepillar/vim-solarized8'
 endif
@@ -41,7 +35,12 @@ Plug 'pangloss/vim-javascript'
 Plug 'troydm/zoomwintab.vim'
 "Plug 'numirias/semshi', {'do': ':UpdateRemotePlugins'}
 Plug 'jszakmeister/vim-togglecursor'
+" Airline additional config:
+" sudo dnf install powerline-fonts
+Plug 'vim-airline/vim-airline'
+Plug 'vim-airline/vim-airline-themes'
 Plug 'equalsraf/neovim-gui-shim'
+Plug 'MattesGroeger/vim-bookmarks'
 call plug#end()          
 filetype plugin indent on   
 
@@ -72,12 +71,22 @@ let &t_8f = "\<Esc>[38;2;%lu;%lu;%lum"
 let &t_8b = "\<Esc>[48;2;%lu;%lu;%lum"
 set termguicolors
 if has('nvim')
-	colorscheme NeoSolarized
+colorscheme NeoSolarized
 else
-	colorscheme solarized8
+colorscheme solarized8
 endif
 set background=light
-
+" airline theme (for statusline)
+let g:airline_theme='solarized'
+" Setup instructions: https://vi.stackexchange.com/a/16512
+let g:airline_powerline_fonts = 1
+" For GUI (not terminal)
+set guifont=Source\ Code\ Pro\ for\ Powerline:h11:cANSI " Font
+" Can't seem to get DejaVu Sans to work.
+"set guifont="DejaVu\ Sans\ Mono\ for\ Powerline:h11:cANSI " Font
+" Remove encoding in airline statusline
+" Source: https://github.com/vim-airline/vim-airline/issues/1309
+let g:airline#parts#ffenc#skip_expected_string='utf-8[unix]'
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " Spacing
@@ -127,6 +136,8 @@ nmap <F8> :TagbarToggle<CR>
 " Tagbar
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 nmap <leader><F8> :TagbarOpen fjc<CR>
+" Sort tags by their appearance in source code.
+let g:tagbar_sort = 0
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " Persistent undo
@@ -219,11 +230,18 @@ set nottimeout
 " Reference for what to remap in insert mode:
 " https://www.reddit.com/r/vim/comments/4w0lib/do_you_use_insert_mode_keybindings/
 
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" vim-bookmarks
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" Saving the bookmarks in the vim directory is important for
+" when working in Docker sessions which will not have the
+" home directory saved.
+let g:bookmark_save_per_working_dir = 1
+
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " coc, completion
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-" Instead, install these extensions manually (easier to get working with docker).
-" let g:coc_global_extensions = ['coc-json', 'coc-python', 'coc-html']
 " Ref: https://github.com/neoclide/coc.nvim
 " Give more space for displaying messages.
 set cmdheight=2
@@ -235,6 +253,15 @@ set updatetime=300
 
 " Don't pass messages to |ins-completion-menu|.
 set shortmess+=c
+
+" Always show the signcolumn, otherwise it would shift the text each time
+" diagnostics appear/become resolved.
+"if has("nvim-0.5.0") || has("patch-8.1.1564")
+"  " Recently vim can merge signcolumn and number column into one
+"  set signcolumn=number
+"else
+"  set signcolumn=yes
+"endif
 
 " Use tab for trigger completion with characters ahead and navigate.
 " NOTE: Use command ':verbose imap <tab>' to make sure tab is not mapped by
@@ -270,12 +297,11 @@ nmap <silent> ]g <Plug>(coc-diagnostic-next)
 " GoTo code navigation.
 nmap <silent> gd <Plug>(coc-definition)
 nmap <silent> gy <Plug>(coc-type-definition)
-nmap <silent> gl <Plug>(coc-implementation)
+nmap <silent> gi <Plug>(coc-implementation)
 nmap <silent> gr <Plug>(coc-references)
 
-" Show documentation in preview window.
-" Originally, 'gh' starts "select mode" which is a bit of a useless feature.
-nnoremap <silent> gh :call <SID>show_documentation()<CR>
+" Use K to show documentation in preview window.
+nnoremap <silent> K :call <SID>show_documentation()<CR>
 
 function! s:show_documentation()
   if (index(['vim','help'], &filetype) >= 0)

@@ -65,6 +65,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 	libseccomp-dev \
 	libjansson-dev \
 	libyaml-dev \
+	# For airline font support
+	fonts-powerline \
 	libxml2-dev && \
 	rm -rf /var/lib/apt/lists/*
 
@@ -115,6 +117,7 @@ RUN conda install --yes \
     ipywidgets && \
 	conda clean -ya
 RUN conda install --yes -c fastai nbdev 
+RUN conda install --yes -c fastai fastai 
 RUN conda install -c conda-forge jupyterlab-spellchecker
 #RUN jupyter labextension install jupyterlab_vim
 # From: https://stackoverflow.com/questions/67050036/enable-jupyterlab-extensions-by-default-via-docker

@@ -2,8 +2,10 @@
 #docker rm csj
 docker run -it \
 --ipc=host \
+--gpus all \
 --name="csj-runcmd-$(date +%s)" \
 -v $(pwd):/app \
+-v /media/disk2/:/data \
 csi \
 $1
 

@@ -1,0 +1,28 @@
+#!/bin/bash
+#docker rm csj
+docker run -it \
+--ipc=host \
+--gpus all \
+--name="csj-runcmd-$(date +%s)" \
+-v $(pwd):/app \
+-v /media/disk2/:/data \
+csi \
+python ./pytorch-image-models/distributed_train.sh \
+	2 						\
+	/data/imagenet/2012/    \
+	-val-split 'val'        \
+	-b 64                   \
+	--model resnet18        \
+	--sched cosine          \
+	--epochs 200            \
+	--lr 0.05               \
+	--amp                   \
+	--remode pixel          \
+	--reprob 0.6            \
+	--aug-splits 3          \
+	--aa rand-m9-mstd0.5-inc1 \
+	--resplit                 \
+	--split-bn                \
+	--jsd                     \
+	--dist-bn reduce          \
+

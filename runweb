@@ -1,0 +1,11 @@
+#!/bin/bash
+#docker rm csj
+docker run -it \
+--ipc=host \
+--gpus 1 \
+--name="cs-runweb-$(date +%s)" \
+-p 0.0.0.0:5000:5000 \
+-v $(pwd):/app \
+csi \
+$1
+
