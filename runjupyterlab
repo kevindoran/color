@@ -6,6 +6,7 @@ docker run -it \
 --name="csj-jupyter-$(date +%s)" \
 -v $(pwd):/app \
 -v /media/disk2/:/data \
+-v /media/disk3/projects/colorspace_data/:/app/notebooks/resources2 \
 -p 0.0.0.0:8888:8888 \
 csi \
 jupyter lab --notebook-dir='./notebooks' --no-browser --ip=0.0.0.0 --port=8888 

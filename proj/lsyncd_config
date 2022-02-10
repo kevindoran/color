@@ -3,11 +3,13 @@ settings {
 }
 sync {
     default.rsyncssh,
-    source="/home/k/Dropbox/projects/colorspace/",
-    --host="m1.us-central1-f.micronet-kdoran",
-    host="PROTEIN",
-    targetdir="/home/k/projects/colorspace_sync/",
+    --source="/home/k/Dropbox/projects/colorspace/",
+    source="/home/k/projects/colorspace_git/",
+    --host="instance-gpu.us-west1-b.myml-01",
+    host="POSEIDON",
+    targetdir="/home/kevin/projects/colorspace_sync/",
+    --targetdir="/media/disk1/colorspace",
     delay=2, -- seconds to wait while aggregating. Default is 15.
-    exclude={"~", "env", ".git", ".*.swp", ".*~", "out", },
-    delete='startup' -- Lsyncd will delete files on target when starting (if needed to keep target folder in sync with source).
+    exclude={"~", "env", ".git", ".*.swp", ".*~", "out", "notebooks", "imagenet"},
+    --delete='startup' -- Lsyncd will delete files on target when starting (if needed to keep target folder in sync with source).
 }

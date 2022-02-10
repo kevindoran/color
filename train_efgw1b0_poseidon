@@ -1,0 +1,35 @@
+#!/bin/bash
+docker run -it \
+--shm-size 100GB \
+-u 0:0 \
+--gpus all \
+--name="csj-runcmd-$(date +%s)" \
+-v $(pwd):/app/ \
+-v $(pwd)/imagenet:/app/imagenet \
+csi \
+python3 -m torch.distributed.launch --nproc_per_node=8  \
+./pytorch-image-models/train.py  \
+	./imagenet/              \
+	--val-split 'val'       \
+	--model efficientnetgw1_b0 \
+	-b 384 				    \
+	--sched step 		    \
+	--epochs 450            \
+	--decay-epochs 2.4      \
+	--decay-rate .97        \
+	--opt rmsproptf 		\
+	--opt-eps .001 	        \
+	--warmup-lr 1e-6 		\
+	--weight-decay 1e-5     \
+	--drop 0.2              \
+	--drop-connect 0.2      \
+	--model-ema             \
+	--model-ema-decay 0.9999 \
+	--aa rand-m9-mstd0.5    \
+	--remode pixel 			\
+	--reprob 0.2            \
+	--amp 					\
+	--lr .048 				\
+	-j 12                   \
+	--output ./out/efficientnetgw1_b0 | tee out.txt
+

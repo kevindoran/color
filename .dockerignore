@@ -4,5 +4,6 @@ data
 out
 env
 .git
+imagenet
 notebooks/resources
 

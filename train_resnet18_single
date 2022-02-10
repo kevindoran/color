@@ -1,0 +1,26 @@
+#!/bin/bash
+#docker rm csj
+docker run -it \
+--ipc=host \
+--gpus all \
+--name="csj-runcmd-$(date +%s)" \
+-v $(pwd):/app \
+-v /media/disk2/:/data \
+csi \
+python3 ./pytorch-image-models/train.py  \
+	./imagenet/ 		    \
+	--val-split 'val'        \
+	-b 128                   \
+	--model resnet18        \
+	--recovery-interval 10000\
+	--sched cosine          \
+	--epochs 200            \
+	--lr 0.05               \
+	--amp                   \
+	--remode pixel          \
+	--reprob 0.6            \
+	--aug-splits 0          \
+	--aa 'v0'               \
+	--workers 8             \
+	--pin-mem               \
+	--output ./out/resnet18_standard | tee out.txt

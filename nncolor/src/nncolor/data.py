@@ -348,7 +348,7 @@ def circle_img(circle_color, bg_color, radius, grid_shape, position,
     img[:] = bg_color
     if grid_shape != None:
         center = to_cv2_coords(img_coords(position, grid_shape, img_shape)) 
-        center = np.array(center) + np.array(pos_offset)
+        center = (np.array(center) + np.array(pos_offset)).astype(np.uint8)
     else:
         center = position
     img = cv2.circle(img, center, radius, circle_color, thickness=-1, 

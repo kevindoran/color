@@ -1,4 +1,4 @@
-FROM pytorch/pytorch 
+FROM pytorch/pytorch:latest
 # I edit the nvimrc too often for it to be a base image.
 # FROM nvimi
 ARG USER_ID=1001
@@ -67,6 +67,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 	libyaml-dev \
 	# For airline font support
 	fonts-powerline \
+	# For scienceplots, we need latex.
+	dvipng texlive-latex-extra texlive-fonts-recommended cm-super \
 	libxml2-dev && \
 	rm -rf /var/lib/apt/lists/*
 
@@ -114,10 +116,9 @@ RUN conda install --yes \
 	jupyterlab  \
     ipykernel>=6 \
     xeus-python \
+	scienceplots \
     ipywidgets && \
 	conda clean -ya
-RUN conda install --yes -c fastai nbdev 
-RUN conda install --yes -c fastai fastai 
 RUN conda install -c conda-forge jupyterlab-spellchecker
 #RUN jupyter labextension install jupyterlab_vim
 # From: https://stackoverflow.com/questions/67050036/enable-jupyterlab-extensions-by-default-via-docker
@@ -144,7 +145,13 @@ RUN pip install graphviz \
 		htmlmin \
 		xarray \
 		einops \
+		ipympl \
 		mypy 
+
+COPY --chown=$USER_ID pytorch-image-models ./pytorch-image-models
+#RUN pip install timm --no-index $PROJ_ROOT/pytorch-image-models
+RUN pip install -e ./pytorch-image-models #timm --no-index $PROJ_ROOT/pytorch-image-models
+#RUN git clone https://github.com/Fangyh09/pytorch-receptive-field.git
 
 # Fix permission issues with ims
 # https://stackoverflow.com/a/54230833/754300
@@ -182,6 +189,10 @@ RUN nvim --headless -c "CocInstall -sync coc-pyright coc-html | qa"
 ###############################################################################
 # /Neovim
 ###############################################################################
+
+RUN mkdir -p /home/app/.config/matplotlib/stylelib
+RUN git clone https://github.com/garrettj403/SciencePlots.git 
+RUN cp -r ./SciencePlots/styles/* /home/app/.config/matplotlib/stylelib
 
 USER root
 # In order to allow the Python package to be edited without
